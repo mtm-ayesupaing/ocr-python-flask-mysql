@@ -189,10 +189,10 @@ def save_passport():
 		else:
 			return not_found()
 	except Exception as e:
-		print(e)
+			print(e)
 	finally:
-		cursor.close() 
-		conn.close()
+			cursor.close() 
+			conn.close()
 		
 @app.route('/passports')
 def passports():
@@ -226,8 +226,8 @@ def passport(id):
 		cursor.close() 
 		conn.close()
 
-@app.route('/updatePassport', methods=['PUT'])
-def update_passport():
+@app.route('/updatePassport/<string:passport_no>', methods=['PUT'])
+def update_passport(passport_no):
 	try:
 		_json = request.json
 		passportType = _json['passportType']
@@ -244,8 +244,8 @@ def update_passport():
 		# validate the received values
 		if name and passportNo and passportType and request.method == 'PUT':
 			# save edits
-			sql = "UPDATE tbl_passport SET passportType=%s, countryCode=%s, passportNo=%s, name=%s, nationality=%s, dob=%s, gender=%s, issueDate=%s, expiryDate=%s, birthPlace=%s, authority=%s WHERE passport_no=%s"
-			data = (passportType, countryCode, passportNo, name, nationality, dob, gender, issueDate, expiryDate, birthPlace, authority)
+			sql = "UPDATE tbl_passport SET passport_type=%s, country_code=%s, passport_no=%s, name=%s, nationality=%s, dob=%s, gender=%s, issue_date=%s, expiry_date=%s, birth_place=%s, authority=%s WHERE passport_no=%s"
+			data = (passportType, countryCode, passportNo, name, nationality, dob, gender, issueDate, expiryDate, birthPlace, authority, passport_no)
 			conn = mysql.connect()
 			cursor = conn.cursor()
 			cursor.execute(sql, data)
@@ -260,13 +260,13 @@ def update_passport():
 	finally:
 		cursor.close() 
 		conn.close()
-		
-@app.route('/deletePassport/<int:id>', methods=['DELETE'])
-def delete_passport(id):
+
+@app.route('/deletePassport/<string:passport_no>', methods=['DELETE'])
+def delete_passport(passport_no):
 	try:
 		conn = mysql.connect()
 		cursor = conn.cursor()
-		cursor.execute("DELETE FROM tbl_passport WHERE passport_no=%s", (id,))
+		cursor.execute("DELETE FROM tbl_passport WHERE passport_no=%s", (passport_no,))
 		conn.commit()
 		resp = jsonify('Passport deleted successfully!')
 		resp.status_code = 200
@@ -290,20 +290,18 @@ def processFile():
                 resp = jsonify('Image uploaded successfully!')
                 with PyTessBaseAPI(path='./tessdata/.', lang='eng') as api:    
                     for img in images:
-                        api.SetImageFile(img)
+                        api.SetImageFile(img)						
                         result['raw_data'] = api.GetUTF8Text()
                         data = api.GetUTF8Text().split('\n')
                         data = [item for item in data if item != '' and item != ' ' and item != '  ']
-                    
-                        for i, value in enumerate(data):
-                            if i == 0:
-                                result['title'] = value                  
+						
+                        for i, value in enumerate(data):             
                             if re.search('Name', value):
                                 nameVal = data[i + 1]
                                 result['name'] = nameVal
                             elif re.search('Nation', value):
                                 nationVal = data[i + 1]
-                                result['nation'] = nationVal
+                                result['nationality'] = nationVal
                             elif re.search('Date of birth', value):
                                 dobVal = data[i + 1]
                                 result['dob'] = dobVal
@@ -315,23 +313,19 @@ def processFile():
                                 result['issue_date'] = dateIssueVal
                             elif re.search('Date of expire', value):
                                 dateExpireVal = data[i + 1]
-                                result['expire_date'] = dateExpireVal
+                                result['expiry_date'] = dateExpireVal
                             elif re.search('Place of', value):
                                 pobVal = data[i + 1]
-                                result['pob'] = pobVal
+                                result['birth_place'] = pobVal
                             elif re.search('Authority', value):
                                 authVal = data[i + 1]
                                 result['authority'] = authVal
                             elif re.search('Passport No', value):
-                                passportNoVal = data[i + 1]
-                                result['passport_no'] = passportNoVal
-                            elif re.search('type', value):
-                                passportTypeVal = data[i + 1]
-                                result['passport_type'] = passportTypeVal
-                            elif re.search('Country Code', value):
-                                countryCodeVal = data[i + 1]
-                                result['country_code'] = countryCodeVal
-
+                                passportVal = data[i + 1]
+                                passportArr = passportVal.split()
+                                result['passport_type'] = passportArr[0]
+                                result['country_code'] = passportArr[1]
+                                result['passport_no'] = passportArr[2]
                 resp = jsonify(result)
                 resp.status_code = 200
                 return resp
