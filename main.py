@@ -1,5 +1,7 @@
+import os
 import pymysql
 from flask_bcrypt import Bcrypt
+from ocr_core import ocr_core
 from app import app
 from db import mysql
 from flask import jsonify
@@ -7,6 +9,8 @@ from flask import flash, request
 from werkzeug.security import generate_password_hash, check_password_hash
 
 bcrypt = Bcrypt(app)
+
+UPLOAD_FOLDER = '/uploads/'
 		
 @app.route('/add', methods=['POST'])
 def add_user():
@@ -14,7 +18,7 @@ def add_user():
 		_json = request.json
 		_name = _json['name']
 		_email = _json['email']
-		_password = _json['pwd']
+		_password = _json['pwd']		
 		# validate the received values
 		if _name and _email and _password and request.method == 'POST':
 			#do not save password as a plain text
@@ -123,16 +127,148 @@ def login():
 		password = json_data['password']
 		conn = mysql.connect()
 		cursor = conn.cursor()
-		print('HERE ', email, password)
 		cursor.execute("SELECT * FROM tbl_user WHERE user_email=%s", email)		
 		user = cursor.fetchone()
-		print('HELLO', user[3])
 		if user and check_password_hash(user[3], password):
 			# session['logged_in'] = True
 			status = True
 		else:
 			status = False
 		return jsonify({'result': status})
+	except Exception as e:
+		print(e)
+	finally:
+		cursor.close() 
+		conn.close()
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_page():
+	try:
+		if request.method == 'POST':
+			file = request.files['file']
+			filepath = UPLOAD_FOLDER + file.filename
+			if file:
+				file.save(os.path.join(os.getcwd() + UPLOAD_FOLDER, file.filename))
+				extracted_text = ocr_core(filepath)
+			resp = jsonify(extracted_text)
+			resp.status_code = 200
+			return resp
+	except Exception as e:
+		print(e)
+
+@app.route('/savePassport', methods=['POST'])
+def save_passport():
+	try:
+		_json = request.json
+		passportType = _json['passportType']
+		countryCode = _json['countryCode']
+		passportNo = _json['passportNo']
+		name = _json['name']
+		nationality = _json['nationality']
+		dob = pymysql.NULL
+		gender = _json['gender']
+		issueDate = pymysql.NULL
+		expiryDate = pymysql.NULL
+		birthPlace = _json['birthPlace']
+		authority = _json['authority']		
+		# validate the received values
+		if name and passportNo and passportType and request.method == 'POST':
+			# save edits
+			sql = "INSERT INTO tbl_passport(passport_no, passport_type, country_code, name, nationality, gender, birth_place, authority) VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
+			# sql = "INSERT INTO tbl_passport(passport_no, passport_type, country_code, name, nationality, dob, gender, issue_date, expiry_date, birth_place, authority) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+			data = (passportNo, passportType, countryCode,  name, nationality, gender, birthPlace, authority)
+			conn = mysql.connect()
+			cursor = conn.cursor()
+			cursor.execute(sql, data)
+			conn.commit()
+			resp = jsonify('Passport data added successfully!')
+			resp.status_code = 200
+			return resp
+		else:
+			return not_found()
+	except Exception as e:
+		print(e)
+	finally:
+		cursor.close() 
+		conn.close()
+		
+@app.route('/passports')
+def passports():
+	try:
+		conn = mysql.connect()
+		cursor = conn.cursor(pymysql.cursors.DictCursor)
+		cursor.execute("SELECT * FROM tbl_passport")
+		rows = cursor.fetchall()
+		resp = jsonify(rows)
+		resp.status_code = 200
+		return resp
+	except Exception as e:
+		print(e)
+	finally:
+		cursor.close() 
+		conn.close()
+		
+@app.route('/passport/<int:id>')
+def passport(id):
+	try:
+		conn = mysql.connect()
+		cursor = conn.cursor(pymysql.cursors.DictCursor)
+		cursor.execute("SELECT * FROM tbl_passport WHERE passport_no=%s", id)
+		row = cursor.fetchone()
+		resp = jsonify(row)
+		resp.status_code = 200
+		return resp
+	except Exception as e:
+		print(e)
+	finally:
+		cursor.close() 
+		conn.close()
+
+@app.route('/updatePassport', methods=['PUT'])
+def update_passport():
+	try:
+		_json = request.json
+		passportType = _json['passportType']
+		countryCode = _json['countryCode']
+		passportNo = _json['passportNo']
+		name = _json['name']
+		nationality = _json['nationality']
+		dob = _json['dob']
+		gender = _json['gender']
+		issueDate = _json['issueDate']
+		expiryDate = _json['expiryDate']
+		birthPlace = _json['birthPlace']
+		authority = _json['authority']
+		# validate the received values
+		if name and passportNo and passportType and request.method == 'PUT':
+			# save edits
+			sql = "UPDATE tbl_passport SET passportType=%s, countryCode=%s, passportNo=%s, name=%s, nationality=%s, dob=%s, gender=%s, issueDate=%s, expiryDate=%s, birthPlace=%s, authority=%s WHERE passport_no=%s"
+			data = (passportType, countryCode, passportNo, name, nationality, dob, gender, issueDate, expiryDate, birthPlace, authority)
+			conn = mysql.connect()
+			cursor = conn.cursor()
+			cursor.execute(sql, data)
+			conn.commit()
+			resp = jsonify('Passport updated successfully!')
+			resp.status_code = 200
+			return resp
+		else:
+			return not_found()
+	except Exception as e:
+		print(e)
+	finally:
+		cursor.close() 
+		conn.close()
+		
+@app.route('/deletePassport/<int:id>', methods=['DELETE'])
+def delete_passport(id):
+	try:
+		conn = mysql.connect()
+		cursor = conn.cursor()
+		cursor.execute("DELETE FROM tbl_passport WHERE passport_no=%s", (id,))
+		conn.commit()
+		resp = jsonify('Passport deleted successfully!')
+		resp.status_code = 200
+		return resp
 	except Exception as e:
 		print(e)
 	finally:
