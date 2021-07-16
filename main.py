@@ -210,13 +210,13 @@ def passports():
 		cursor.close() 
 		conn.close()
 		
-@app.route('/passport/<int:id>')
-def passport(id):
+@app.route('/searchPassport/<string:passport_no>')
+def passport(passport_no):
 	try:
 		conn = mysql.connect()
 		cursor = conn.cursor(pymysql.cursors.DictCursor)
-		cursor.execute("SELECT * FROM tbl_passport WHERE passport_no=%s", id)
-		row = cursor.fetchone()
+		cursor.execute("SELECT * FROM tbl_passport WHERE passport_no=%s", passport_no)
+		row = cursor.fetchall()
 		resp = jsonify(row)
 		resp.status_code = 200
 		return resp
