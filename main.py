@@ -8,6 +8,7 @@ from flask_cors import CORS, cross_origin
 from werkzeug.security import generate_password_hash, check_password_hash
 from tesserocr import PyTessBaseAPI, RIL, iterate_level
 from PIL import Image
+import datetime
 import re
 import os
 
@@ -167,22 +168,23 @@ def save_passport():
 		passportNo = _json['passportNo']
 		name = _json['name']
 		nationality = _json['nationality']
-		dob = pymysql.NULL
 		gender = _json['gender']
-		issueDate = pymysql.NULL
-		expiryDate = pymysql.NULL
+		dob = datetime.datetime.strptime(_json['dob'], "%Y-%m-%dT%H:%M:%S.%fZ")
+		issueDate = datetime.datetime.strptime(_json['issueDate'],"%Y-%m-%dT%H:%M:%S.%fZ")
+		expiryDate = datetime.datetime.strptime(_json['expiryDate'],"%Y-%m-%dT%H:%M:%S.%fZ")
 		birthPlace = _json['birthPlace']
 		authority = _json['authority']		
 		# validate the received values
 		if name and passportNo and passportType and request.method == 'POST':
 			# save edits
-			sql = "INSERT INTO tbl_passport(passport_no, passport_type, country_code, name, nationality, gender, birth_place, authority) VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
-			# sql = "INSERT INTO tbl_passport(passport_no, passport_type, country_code, name, nationality, dob, gender, issue_date, expiry_date, birth_place, authority) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-			data = (passportNo, passportType, countryCode,  name, nationality, gender, birthPlace, authority)
+			#sql = "INSERT INTO tbl_passport(passport_no, passport_type, country_code, name, nationality, gender, birth_place, authority) VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
+			sql = "INSERT INTO tbl_passport(passport_no, passport_type, country_code, name, nationality, dob, gender, issue_date, expiry_date, birth_place, authority) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+			data = (passportNo, passportType, countryCode,  name, nationality, dob, gender, issueDate, expiryDate, birthPlace, authority)
 			conn = mysql.connect()
 			cursor = conn.cursor()
 			cursor.execute(sql, data)
 			conn.commit()
+			cursor.close()
 			resp = jsonify('Passport data added successfully!')
 			resp.status_code = 200
 			return resp
@@ -191,8 +193,8 @@ def save_passport():
 	except Exception as e:
 			print(e)
 	finally:
-			cursor.close() 
-			conn.close()
+		cursor.close()
+		conn.close()
 		
 @app.route('/passports')
 def passports():
@@ -210,13 +212,57 @@ def passports():
 		cursor.close() 
 		conn.close()
 		
-@app.route('/passport/<int:id>')
-def passport(id):
+@app.route('/searchPassport/<string:passport_no>')
+def passport(passport_no):
 	try:
 		conn = mysql.connect()
 		cursor = conn.cursor(pymysql.cursors.DictCursor)
-		cursor.execute("SELECT * FROM tbl_passport WHERE passport_no=%s", id)
-		row = cursor.fetchone()
+		cursor.execute("SELECT * FROM tbl_passport WHERE passport_no=%s", passport_no)
+		row = cursor.fetchall()
+		resp = jsonify(row)
+		resp.status_code = 200
+		return resp
+	except Exception as e:
+		print(e)
+	finally:
+		cursor.close() 
+		conn.close()
+
+
+@app.route('/searchData', methods=['POST'])
+def searchData():
+	try:
+		_json = request.json	
+		name = _json['name']
+		expiryDate = _json['expiryDate']
+		passportNo = _json['passportNo']
+		query = 'SELECT * FROM tbl_passport WHERE '
+		if (name and passportNo == '' and expiryDate == ''):
+			query += 'name = "' + name + '"'
+		elif (name and (passportNo or expiryDate)):
+			query += 'name = "' + name + '" AND '
+		else:
+			query += ''
+		
+		if (passportNo and expiryDate == ''):
+			query += 'passport_no = "' + passportNo + '"'
+		elif (passportNo and expiryDate):
+			query += 'passport_no = "' + passportNo + '" AND '
+		else:
+			query += ''
+
+		if (expiryDate):
+			expiryDate = datetime.datetime.strptime(_json['expiryDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
+			expiryDate = expiryDate.strftime("%Y-%m-%d")
+			query += 'expiry_date >= "' + expiryDate + '"'
+		else:
+			query += ''
+
+		print(query)
+		conn = mysql.connect()
+		cursor = conn.cursor(pymysql.cursors.DictCursor)
+		cursor.execute(query)
+		row = cursor.fetchall()
 		resp = jsonify(row)
 		resp.status_code = 200
 		return resp
@@ -326,6 +372,7 @@ def processFile():
                                 result['passport_type'] = passportArr[0]
                                 result['country_code'] = passportArr[1]
                                 result['passport_no'] = passportArr[2]
+                print(result)
                 resp = jsonify(result)
                 resp.status_code = 200
                 return resp
