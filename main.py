@@ -228,6 +228,50 @@ def passport(passport_no):
 		cursor.close() 
 		conn.close()
 
+
+@app.route('/searchData', methods=['POST'])
+def searchData():
+	try:
+		_json = request.json	
+		name = _json['name']
+		expiryDate = _json['expiryDate']
+		passportNo = _json['passportNo']
+		query = 'SELECT * FROM tbl_passport WHERE '
+		if (name and passportNo == '' and expiryDate == ''):
+			query += 'name = "' + name + '"'
+		elif (name and (passportNo or expiryDate)):
+			query += 'name = "' + name + '" AND '
+		else:
+			query += ''
+		
+		if (passportNo and expiryDate == ''):
+			query += 'passport_no = "' + passportNo + '"'
+		elif (passportNo and expiryDate):
+			query += 'passport_no = "' + passportNo + '" AND '
+		else:
+			query += ''
+
+		if (expiryDate):
+			expiryDate = datetime.datetime.strptime(_json['expiryDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
+			expiryDate = expiryDate.strftime("%Y-%m-%d")
+			query += 'expiry_date >= "' + expiryDate + '"'
+		else:
+			query += ''
+
+		print(query)
+		conn = mysql.connect()
+		cursor = conn.cursor(pymysql.cursors.DictCursor)
+		cursor.execute(query)
+		row = cursor.fetchall()
+		resp = jsonify(row)
+		resp.status_code = 200
+		return resp
+	except Exception as e:
+		print(e)
+	finally:
+		cursor.close() 
+		conn.close()
+
 @app.route('/updatePassport/<string:passport_no>', methods=['PUT'])
 def update_passport(passport_no):
 	try:
