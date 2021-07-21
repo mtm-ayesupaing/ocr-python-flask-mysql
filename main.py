@@ -24,18 +24,26 @@ def add_user():
 		_password = _json['pwd']		
 		# validate the received values
 		if _name and _email and _password and request.method == 'POST':
-			#do not save password as a plain text
-			_hashed_password = generate_password_hash(_password)
-			# save edits
-			sql = "INSERT INTO tbl_user(user_name, user_email, user_password) VALUES(%s, %s, %s)"
-			data = (_name, _email, _hashed_password,)
 			conn = mysql.connect()
 			cursor = conn.cursor()
-			cursor.execute(sql, data)
+			# check duplicate email
+			cursor.execute("SELECT user_id id, user_name name, user_email email, user_password pwd FROM tbl_user WHERE user_email=%s", _email)
+			userRow = cursor.fetchone()
 			conn.commit()
-			resp = jsonify('User added successfully!')
-			resp.status_code = 200
-			return resp
+			if userRow:
+				resp = jsonify('Duplicate Email!')
+				return resp				
+			else:
+				# do not save password as a plain text
+				_hashed_password = generate_password_hash(_password)
+				# save edits
+				sql = "INSERT INTO tbl_user(user_name, user_email, user_password) VALUES(%s, %s, %s)"
+				data = (_name, _email, _hashed_password,)				
+				cursor.execute(sql, data)
+				conn.commit()
+				resp = jsonify('User added successfully!')
+				resp.status_code = 200
+				return resp
 		else:
 			return not_found()
 	except Exception as e:
@@ -121,6 +129,39 @@ def delete_user(id):
 	finally:
 		cursor.close() 
 		conn.close()
+
+@app.route('/searchUser', methods=['POST'])
+def searchUser():
+	try:
+		_json = request.json	
+		name = _json['name']
+		email = _json['email']
+		query = 'SELECT user_id id, user_name name, user_email email FROM tbl_user WHERE '
+		if (name and email == ''):
+			query += 'user_name like "%' + name + '%"'
+		elif (name and email):
+			query += 'user_name like "%' + name + '%" AND '
+		else:
+			query += ''
+		
+		if (email):
+			query += 'user_email like "%' + email + '%"'
+		else:
+			query += ''
+
+		print(query)
+		conn = mysql.connect()
+		cursor = conn.cursor(pymysql.cursors.DictCursor)
+		cursor.execute(query)
+		row = cursor.fetchall()
+		resp = jsonify(row)
+		resp.status_code = 200
+		return resp
+	except Exception as e:
+		print(e)
+	finally:
+		cursor.close() 
+		conn.close()		
 
 @app.route('/login', methods=['POST'])
 def login():
