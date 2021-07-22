@@ -253,8 +253,8 @@ def passports():
 		cursor.close() 
 		conn.close()
 		
-@app.route('/searchPassport/<string:passport_no>')
-def passport(passport_no):
+@app.route('/getPassportNo/<string:passport_no>')
+def getPassportNo(passport_no):
 	try:
 		conn = mysql.connect()
 		cursor = conn.cursor(pymysql.cursors.DictCursor)
@@ -270,8 +270,8 @@ def passport(passport_no):
 		conn.close()
 
 
-@app.route('/searchData', methods=['POST'])
-def searchData():
+@app.route('/searchPassport', methods=['POST'])
+def searchPassport():
 	try:
 		_json = request.json	
 		name = _json['name']
@@ -279,16 +279,16 @@ def searchData():
 		passportNo = _json['passportNo']
 		query = 'SELECT * FROM tbl_passport WHERE '
 		if (name and passportNo == '' and expiryDate == ''):
-			query += 'name = "' + name + '"'
+			query += 'name like "%' + name + '%"'
 		elif (name and (passportNo or expiryDate)):
-			query += 'name = "' + name + '" AND '
+			query += 'name like "%' + name + '%" AND '
 		else:
 			query += ''
 		
 		if (passportNo and expiryDate == ''):
-			query += 'passport_no = "' + passportNo + '"'
+			query += 'passport_no like "%' + passportNo + '%"'
 		elif (passportNo and expiryDate):
-			query += 'passport_no = "' + passportNo + '" AND '
+			query += 'passport_no like "%' + passportNo + '%" AND '
 		else:
 			query += ''
 
@@ -372,6 +372,8 @@ def processFile():
             if file:
                 data = []
                 result = {}
+                passport_no = ''
+                passport_type = ''
                 file.save(os.path.join(os.getcwd() + UPLOAD_FOLDER, file.filename))
                 images = ['uploads/' + file.filename]
                 resp = jsonify('Image uploaded successfully!')
@@ -381,12 +383,19 @@ def processFile():
                         result['raw_data'] = api.GetUTF8Text()
                         data = api.GetUTF8Text().split('\n')
                         data = [item for item in data if item != '' and item != ' ' and item != '  ']
-						
-                        for i, value in enumerate(data):             
+                        passport_no = data[-1].split('<')
+                        passport_type = data[-2].split('MMR')
+                        for i, value in enumerate(data):
+                            result['country_code'] = 'MMR'
+                            if 0 in range(len(passport_no)):
+                                result['passport_no'] = passport_no[0]
+                            if 0 in range(len(passport_type)):
+                                result['passport_type'] = passport_type[0] 
+        
                             if re.search('Name', value):
                                 nameVal = data[i + 1]
                                 result['name'] = nameVal
-                            elif re.search('Nation', value):
+                            elif re.search('Nationality', value):
                                 nationVal = data[i + 1]
                                 result['nationality'] = nationVal
                             elif re.search('Date of birth', value):
@@ -398,22 +407,27 @@ def processFile():
                             elif re.search('Date of issue', value):
                                 dateIssueVal = data[i + 1]
                                 result['issue_date'] = dateIssueVal
-                            elif re.search('Date of expire', value):
+                            elif re.search('Date of expiry', value):
                                 dateExpireVal = data[i + 1]
                                 result['expiry_date'] = dateExpireVal
-                            elif re.search('Place of', value):
+                            elif re.search('Place of birth', value):
                                 pobVal = data[i + 1]
                                 result['birth_place'] = pobVal
                             elif re.search('Authority', value):
                                 authVal = data[i + 1]
                                 result['authority'] = authVal
-                            elif re.search('Passport No', value):
+                            elif re.search('passport', value):
                                 passportVal = data[i + 1]
                                 passportArr = passportVal.split()
-                                result['passport_type'] = passportArr[0]
-                                result['country_code'] = passportArr[1]
-                                result['passport_no'] = passportArr[2]
-                print(result)
+                                if 0 in range(len(passportArr)):
+                                    result['passport_type'] = passportArr[0]
+                                if 1 in range(len(passportArr)):
+                                    result['country_code'] = passportArr[1]
+                                if 2 in range(len(passportArr)):
+                                    result['passport_no'] = passportArr[2]
+                            elif re.search('Country', value):
+                                countryVal = data[i + 1]
+                                result['country_code'] = countryVal
                 resp = jsonify(result)
                 resp.status_code = 200
                 return resp
