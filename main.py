@@ -275,30 +275,38 @@ def searchPassport():
 	try:
 		_json = request.json	
 		name = _json['name']
-		expiryDate = _json['expiryDate']
+		startDate = _json['startDate']
+		endDate = _json['endDate']
 		passportNo = _json['passportNo']
+		print(startDate + '==>' + endDate)
 		query = 'SELECT * FROM tbl_passport WHERE '
-		if (name and passportNo == '' and expiryDate == ''):
+		if (name and passportNo == '' and startDate == '' and endDate == ''):
 			query += 'name like "%' + name + '%"'
-		elif (name and (passportNo or expiryDate)):
+		elif (name and (passportNo or startDate or endDate)):
 			query += 'name like "%' + name + '%" AND '
 		else:
 			query += ''
 		
-		if (passportNo and expiryDate == ''):
+		if (passportNo and startDate == '' and endDate == ''):
 			query += 'passport_no like "%' + passportNo + '%"'
-		elif (passportNo and expiryDate):
+		elif (passportNo and startDate and endDate):
 			query += 'passport_no like "%' + passportNo + '%" AND '
 		else:
 			query += ''
 
-		if (expiryDate):
-			expiryDate = datetime.datetime.strptime(_json['expiryDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
-			expiryDate = expiryDate.strftime("%Y-%m-%d")
-			query += 'expiry_date >= "' + expiryDate + '"'
+		if (startDate and endDate):
+			startDate = datetime.datetime.strptime(_json['startDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
+			startDate = startDate.strftime("%Y-%m-%d")
+			endDate = datetime.datetime.strptime(_json['endDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
+			endDate = endDate.strftime("%Y-%m-%d")
+			query += 'expiry_date >= DATE(DATE_ADD("' + startDate + '", INTERVAL 1 DAY)) and expiry_date <= DATE(DATE_ADD("' + endDate + '", INTERVAL 1 DAY))'
 		else:
 			query += ''
 
+		if (name == '' and passportNo == '' and startDate == '' and endDate == ''):
+			query = 'SELECT * FROM tbl_passport ORDER BY passport_no desc'
+		else :
+			query += ' ORDER BY passport_no desc'
 		print(query)
 		conn = mysql.connect()
 		cursor = conn.cursor(pymysql.cursors.DictCursor)
