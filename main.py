@@ -424,7 +424,7 @@ def processFile():
                             elif re.search('Authority', value):
                                 authVal = data[i + 1]
                                 result['authority'] = authVal
-                            elif re.search('passport', value):
+                            elif re.search('Passport No', value):
                                 passportVal = data[i + 1]
                                 passportArr = passportVal.split()
                                 if 0 in range(len(passportArr)):
