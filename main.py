@@ -210,9 +210,9 @@ def save_passport():
 		name = _json['name']
 		nationality = _json['nationality']
 		gender = _json['gender']
-		dob = datetime.datetime.strptime(_json['dob'], "%Y-%m-%dT%H:%M:%S.%fZ")
-		issueDate = datetime.datetime.strptime(_json['issueDate'],"%Y-%m-%dT%H:%M:%S.%fZ")
-		expiryDate = datetime.datetime.strptime(_json['expiryDate'],"%Y-%m-%dT%H:%M:%S.%fZ")
+		dob = datetime.datetime.strptime(_json['dob'], "%Y-%m-%d")
+		issueDate = datetime.datetime.strptime(_json['issueDate'], "%Y-%m-%d")
+		expiryDate = datetime.datetime.strptime(_json['expiryDate'], "%Y-%m-%d")
 		birthPlace = _json['birthPlace']
 		authority = _json['authority']		
 		# validate the received values
