@@ -1,0 +1,9 @@
+flask == 1.*
+werkzeug == 0.16.1; python_version=="3.7"
+flask_cors
+requests
+flask_bcrypt
+tesserocr-2.4.0-cp37-cp37m-win_amd64.whl
+Pillow
+pymysql
+flask-mysqldb
