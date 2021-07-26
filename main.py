@@ -84,14 +84,14 @@ def user(id):
 		cursor.close() 
 		conn.close()
 
-@app.route('/update', methods=['PUT'])
-def update_user():
+@app.route('/update/<int:id>', methods=['PUT'])
+def update_user(id):
 	try:
 		_json = request.json
 		_id = _json['id']
 		_name = _json['name']
 		_email = _json['email']
-		_password = _json['pwd']		
+		_password = _json['pwd']
 		# validate the received values
 		if _name and _email and _password and _id and request.method == 'PUT':
 			#do not save password as a plain text
