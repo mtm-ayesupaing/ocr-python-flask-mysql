@@ -408,18 +408,15 @@ def processFile():
                                 result['nationality'] = nationVal
                             elif re.search('Date of birth', value):
                                 dobVal = data[i + 1]
-                                dobVal = getDate(dobVal)
                                 result['dob'] = dobVal
                             elif re.search('Sex', value):
                                 genderVal = data[i + 1]
                                 result['gender'] = genderVal
                             elif re.search('Date of issue', value):
                                 dateIssueVal = data[i + 1]
-                                dateIssueVal = getDate(dateIssueVal)
                                 result['issue_date'] = dateIssueVal
                             elif re.search('Date of expiry', value):
                                 dateExpireVal = data[i + 1]
-                                dateExpireVal = getDate(dateExpireVal)
                                 result['expiry_date'] = dateExpireVal
                             elif re.search('Place of birth', value):
                                 pobVal = data[i + 1]
@@ -446,24 +443,6 @@ def processFile():
                 return not_found()
     except Exception as e:
             print(e)
-
-def getDate(str: any):
-    date_Arr = str.split()
-    date_Res = {}
-    month = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC', '0CT', 'N0V']
-    for val in date_Arr:  
-        if val in month and val == '0CT':
-            date_Res['month'] = 'OCT'
-        elif val in month and val == 'N0V':
-            date_Res['month'] = 'NOV'
-        elif val in month:
-            date_Res['month'] = val
-        elif (val.isnumeric() and len(val) == 2):
-            date_Res['day'] = val
-        elif (val.isnumeric() and len(val) == 4):
-            date_Res['year'] = val
-    return date_Res
-
 		
 @app.errorhandler(404)
 def not_found(error=None):
