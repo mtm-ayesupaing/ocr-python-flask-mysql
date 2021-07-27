@@ -242,7 +242,7 @@ def passports():
 	try:
 		conn = mysql.connect()
 		cursor = conn.cursor(pymysql.cursors.DictCursor)
-		cursor.execute("SELECT * FROM tbl_passport")
+		cursor.execute("SELECT * FROM tbl_passport ORDER BY passport_no desc")
 		rows = cursor.fetchall()
 		resp = jsonify(rows)
 		resp.status_code = 200
@@ -272,54 +272,63 @@ def getPassportNo(passport_no):
 
 @app.route('/searchPassport', methods=['POST'])
 def searchPassport():
-	try:
-		_json = request.json	
-		name = _json['name']
-		startDate = _json['startDate']
-		endDate = _json['endDate']
-		passportNo = _json['passportNo']
-		print(startDate + '==>' + endDate)
-		query = 'SELECT * FROM tbl_passport WHERE '
-		if (name and passportNo == '' and startDate == '' and endDate == ''):
-			query += 'name like "%' + name + '%"'
-		elif (name and (passportNo or startDate or endDate)):
-			query += 'name like "%' + name + '%" AND '
-		else:
-			query += ''
+    try:
+        _json = request.json	
+        name = _json['name'].strip()
+        startDate = _json['startDate'].strip()
+        endDate = _json['endDate'].strip()
+        passportNo = _json['passportNo'].strip()
+        print(startDate + '==>' + endDate)
+        query = 'SELECT * FROM tbl_passport WHERE '
+        if (name and passportNo == '' and startDate == '' and endDate == ''):
+            query += 'name like "%' + name + '%"'
+        elif (name and (passportNo or startDate or endDate)):
+            query += 'name like "%' + name + '%" AND '
+        else:
+            query += ''
+
+        if (passportNo and startDate == '' and endDate == ''):
+            query += 'passport_no like "%' + passportNo + '%"'
+        elif (passportNo and (startDate or endDate)):
+            query += 'passport_no like "%' + passportNo + '%" AND '
+        else:
+            query += ''
+
+        if (startDate and endDate == ''):
+            startDate = datetime.datetime.strptime(_json['startDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            startDate = startDate.strftime("%Y-%m-%d")
+            query += 'expiry_date >= DATE(DATE_ADD("' + startDate + '", INTERVAL 1 DAY)) '
+        elif (startDate == '' and endDate):
+            endDate = datetime.datetime.strptime(_json['endDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            endDate = endDate.strftime("%Y-%m-%d")
+            query += 'expiry_date <= DATE(DATE_ADD("' + endDate + '", INTERVAL 1 DAY)) '
+        elif (startDate and endDate):
+            startDate = datetime.datetime.strptime(_json['startDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            startDate = startDate.strftime("%Y-%m-%d")
+            endDate = datetime.datetime.strptime(_json['endDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            endDate = endDate.strftime("%Y-%m-%d")
+            query += 'expiry_date >= DATE(DATE_ADD("' + startDate + '", INTERVAL 1 DAY)) and expiry_date <= DATE(DATE_ADD("' + endDate + '", INTERVAL 1 DAY))'
+        else:
+            query += ''
+
+        if (name == '' and passportNo == '' and startDate == '' and endDate == ''):
+            query = 'SELECT * FROM tbl_passport ORDER BY passport_no desc'
+        else :
+            query += ' ORDER BY passport_no desc'
 		
-		if (passportNo and startDate == '' and endDate == ''):
-			query += 'passport_no like "%' + passportNo + '%"'
-		elif (passportNo and startDate and endDate):
-			query += 'passport_no like "%' + passportNo + '%" AND '
-		else:
-			query += ''
-
-		if (startDate and endDate):
-			startDate = datetime.datetime.strptime(_json['startDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
-			startDate = startDate.strftime("%Y-%m-%d")
-			endDate = datetime.datetime.strptime(_json['endDate'], "%Y-%m-%dT%H:%M:%S.%fZ")
-			endDate = endDate.strftime("%Y-%m-%d")
-			query += 'expiry_date >= DATE(DATE_ADD("' + startDate + '", INTERVAL 1 DAY)) and expiry_date <= DATE(DATE_ADD("' + endDate + '", INTERVAL 1 DAY))'
-		else:
-			query += ''
-
-		if (name == '' and passportNo == '' and startDate == '' and endDate == ''):
-			query = 'SELECT * FROM tbl_passport ORDER BY passport_no desc'
-		else :
-			query += ' ORDER BY passport_no desc'
-		print(query)
-		conn = mysql.connect()
-		cursor = conn.cursor(pymysql.cursors.DictCursor)
-		cursor.execute(query)
-		row = cursor.fetchall()
-		resp = jsonify(row)
-		resp.status_code = 200
-		return resp
-	except Exception as e:
-		print(e)
-	finally:
-		cursor.close() 
-		conn.close()
+        print(query)
+        conn = mysql.connect()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor.execute(query)
+        row = cursor.fetchall()
+        resp = jsonify(row)
+        resp.status_code = 200
+        return resp
+    except Exception as e:
+        print(e)
+    finally:
+        cursor.close() 
+        conn.close()
 
 @app.route('/updatePassport/<string:passport_no>', methods=['PUT'])
 def update_passport(passport_no):
