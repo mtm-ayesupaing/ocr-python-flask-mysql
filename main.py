@@ -387,19 +387,19 @@ def processFile():
                 resp = jsonify('Image uploaded successfully!')
                 with PyTessBaseAPI(path='./tessdata/.', lang='eng') as api:    
                     for img in images:
-                        api.SetImageFile(img)						
+                        api.SetImageFile(img)
                         result['raw_data'] = api.GetUTF8Text()
                         data = api.GetUTF8Text().split('\n')
                         data = [item for item in data if item != '' and item != ' ' and item != '  ']
                         passport_no = data[-1].split('<')
                         passport_type = data[-2].split('MMR')
-                        for i, value in enumerate(data):
-                            result['country_code'] = 'MMR'
-                            if 0 in range(len(passport_no)):
-                                result['passport_no'] = passport_no[0]
-                            if 0 in range(len(passport_type)):
-                                result['passport_type'] = passport_type[0] 
-        
+                        result['country_code'] = 'MMR'
+                        if 0 in range(len(passport_no)):
+                            result['passport_no'] = passport_no[0]
+                        if 0 in range(len(passport_type)):
+                            result['passport_type'] = passport_type[0] 
+                        for i, value in enumerate(data): 
+
                             if re.search('Name', value):
                                 nameVal = data[i + 1]
                                 result['name'] = nameVal
