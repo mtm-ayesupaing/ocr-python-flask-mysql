@@ -11,6 +11,7 @@ from PIL import Image
 import datetime
 import re
 import os
+import jwt
 
 bcrypt = Bcrypt(app)
 UPLOAD_FOLDER = '/uploads/'
@@ -21,7 +22,7 @@ def add_user():
 		_json = request.json
 		_name = _json['name']
 		_email = _json['email']
-		_password = _json['pwd']		
+		_password = _json['pwd']
 		# validate the received values
 		if _name and _email and _password and request.method == 'POST':
 			conn = mysql.connect()
@@ -38,7 +39,7 @@ def add_user():
 				_hashed_password = generate_password_hash(_password)
 				# save edits
 				sql = "INSERT INTO tbl_user(user_name, user_email, user_password) VALUES(%s, %s, %s)"
-				data = (_name, _email, _hashed_password,)				
+				data = (_name, _email, _hashed_password,)
 				cursor.execute(sql, data)
 				conn.commit()
 				resp = jsonify('User added successfully!')
@@ -175,10 +176,17 @@ def login():
 		user = cursor.fetchone()
 		if user and check_password_hash(user[3], password):
 			# session['logged_in'] = True
+			today = datetime.datetime.now()
+			minute = datetime.timedelta(minutes=60)
+			_token = jwt.encode(
+				{'email' : email,
+				'exp' : today + minute},
+				app.config['SECRET_KEY'])
+			print(_token)
 			status = True
 		else:
 			status = False
-		return jsonify({'result': status})
+		return jsonify({'result': status, 'token': _token})
 	except Exception as e:
 		print(e)
 	finally:

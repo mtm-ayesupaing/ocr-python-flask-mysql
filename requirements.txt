@@ -8,3 +8,4 @@ Pillow
 tesserocr
 pymysql
 flask-mysqldb
+pyjwt
