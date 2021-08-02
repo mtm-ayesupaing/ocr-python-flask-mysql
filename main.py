@@ -185,8 +185,9 @@ def login():
 			print(_token)
 			status = True
 		else:
+			_token = None
 			status = False
-		return jsonify({'result': status, 'token': _token})
+		return jsonify({'result': status, 'token': _token, 'email': email})
 	except Exception as e:
 		print(e)
 	finally:
